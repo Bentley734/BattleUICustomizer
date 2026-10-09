@@ -61,6 +61,14 @@ return function(mod)
     if not result[1] then error(result[2],0) end
     return unpack(result,2)
   end
+  local function textPlaced(fn,x,w,total,col,columns,...)
+    local dest,scale=placement(x,w,total)
+    local delta=dest-x+(w*scale-w)*(col+.5)/columns
+    G.push('all');G.translate(delta,0);placementDepth=placementDepth+1
+    local result={pcall(fn,...)};placementDepth=placementDepth-1;G.pop()
+    if not result[1] then error(result[2],0) end
+    return unpack(result,2)
+  end
   -- Emerald palette and double frame, drawn at each game's native geometry.
   -- Original artwork; no ROM graphics are distributed.
   local function panel(x,y,w,h, dark)
@@ -140,14 +148,14 @@ return function(mod)
     F.draw=function(text,x,y,...)
       if not enabled() or not command or y<112 then return fontDraw(text,x,y,...) end
       if x<120 then return end -- discard the unused action prompt
-      local result={placed(fontDraw,120,120,240,text,x,y,...)}
+      local result={textPlaced(fontDraw,120,120,240,x>=184 and 1 or 0,2,text,x,y,...)}
       command=command+1;if command>=4 then command=nil end
       return unpack(result)
     end
     for _,spec in ipairs({{'src.ui.game3.window','cursorPx'},{'src.ui.game3.rs.menu_cursor','draw'}}) do
       local target=require(spec[1]);local native=target[spec[2]]
       target[spec[2]]=function(x,y,...)
-        if enabled() and command and x>=120 and y>=112 then return placed(native,120,120,240,x,y,...) end
+        if enabled() and command and x>=120 and y>=112 then return textPlaced(native,120,120,240,x>=184 and 1 or 0,2,x,y,...) end
         return native(x,y,...)
       end
     end
@@ -275,9 +283,28 @@ return function(mod)
     local B = require(mod.generation==2 and 'src.ui.gen2.BattleState' or 'src.battle.BattleState')
     local method = mod.generation==2 and 'drawBottom' or 'drawTextArea'
     local draw = B[method]
-    local mode, battle, wide = nil,nil,false
+    local mode, battle, wide, offset = nil,nil,false,0
     local function commandMenu() return battle and battle.phase=='menu' and not battle.safari and not battle.contest end
     local function moves() return battle and (battle.phase=='moves' or battle.phase=='moveSelect') end
+    local function menuGeometry()
+      if commandMenu() then
+        if wide then return 160,144,304,232,2 end
+        return 64+offset*8,96,160+offset*8,120+offset*8,2
+      elseif moves() then
+        -- Wide/GBA move grids already share the bottom with a useful PP/TYPE panel.
+        if wide then return 0,224,224,112,2 end
+        return 32,128+offset*8,160+offset*8,nil,1
+      end
+    end
+    local function moveText(fn,x,y,...)
+      local lx,lw,total,split,columns=menuGeometry()
+      if not enabled() or not lx or mode=='box' or mode=='background'
+        or placementDepth>0 or y<(wide and 112 or moves() and 104 or 112) then return fn(x,y,...) end
+      if wide and commandMenu() and x<160 then return end
+      if wide and moves() and x>=224 then return fn(x,y,...) end
+      if x<lx then return fn(x,y,...) end
+      return textPlaced(fn,lx,lw,total,split and x>=split and 1 or 0,columns,x,y,...)
+    end
     local function skip(x,y,w,h)
       -- The TYPE/PP box ends one tile into the move list. In docked layouts
       -- its contents are outside the clip, leaving just this orphan border.
@@ -305,11 +332,19 @@ return function(mod)
             if not result[1] then error(result[2],0) end
           end
         end
-        if wide and commandMenu() then
-          placed(function() faded(background);protect(x*8,y*8,w*8,h*8) end,160,144,304)
-        elseif wide then faded(background) else background() end
-        if wide and not commandMenu() then protect(x*8,y*8,w*8,h*8)
-        elseif not wide and queue then queue[#queue+1]={x*8,y*8,w*8,h*8} end
+        local lx,lw,total=menuGeometry()
+        local relocate=lx and x*8==lx and y>=12
+        if wide then
+          local function render() faded(background);protect(x*8,y*8,w*8,h*8) end
+          if relocate then placed(render,lx,lw,total) else render() end
+        else
+          if relocate then placed(background,lx,lw,total) else background() end
+          if queue then
+            local dest,scale=x*8,1
+            if relocate then dest,scale=placement(lx,lw,total) end
+            queue[#queue+1]={dest,y*8,w*8*scale,h*8}
+          end
+        end
         G.setColor(0,0,0,1)
       end
     end
@@ -318,11 +353,25 @@ return function(mod)
     -- Remove native paper patches and border-repair glyphs on move selection.
     local textDraw=Font.draw
     Font.draw=function(text,x,y,...)
-      if enabled() and wide and commandMenu() and y>=112 and placementDepth==0 then
-        if x<160 then return end
-        return placed(textDraw,160,144,304,text,x,y,...)
+      local args={...}
+      return moveText(function(px,py) return textDraw(text,px,py,unpack(args)) end,x,y)
+    end
+    if mod.generation==2 then
+      local Chrome=require('src.ui.gen2.Chrome')
+      for _,name in ipairs({'printThrough','cursorThrough'}) do
+        local native=Chrome[name]
+        if name=='printThrough' then
+          Chrome[name]=function(text,x,y,...)
+            local args={...}
+            return moveText(function(px,py) return native(text,px/8,py/8,unpack(args)) end,x*8,y*8)
+          end
+        else
+          Chrome[name]=function(x,y,...)
+            local args={...}
+            return moveText(function(px,py) return native(px/8,py/8,unpack(args)) end,x*8,y*8)
+          end
+        end
       end
-      return textDraw(text,x,y,...)
     end
     if mod.generation==2 and B.printMessage then
       local message=B.printMessage
@@ -336,21 +385,18 @@ return function(mod)
       if mode=='background' then return end
       if mode=='text' and moves() and ((x==32 and y==96) or (x==80 and y==96))
         and (c==Font.BORDER.h or c==Font.BORDER.br) then return end
-      if enabled() and wide and commandMenu() and y>=112 and placementDepth==0 then
-        if x<160 then return end
-        return placed(code,160,144,304,c,x,y,...)
-      end
-      return code(c,x,y,...)
+      local args={...}
+      return moveText(function(px,py) return code(c,px,py,unpack(args)) end,x,y)
     end
     local function run(self,...)
       local args={...}
-      local priorBattle,priorMode=battle,mode
-      battle=self
+      local priorBattle,priorMode,priorOffset=battle,mode,offset
+      battle=self;offset=mod.generation==2 and (tonumber(args[1]) or 0) or 0
       local priorQueue=queue; queue={}
       local originalDraw,rectangle,print,printf=G.draw,G.rectangle,G.print,G.printf
       local function restore()
         G.draw,G.rectangle,G.print,G.printf=originalDraw,rectangle,print,printf
-        battle,mode=priorBattle,priorMode
+        battle,mode,offset=priorBattle,priorMode,priorOffset
         queue=priorQueue
       end
       local ok,err=pcall(function()
@@ -375,10 +421,6 @@ return function(mod)
     end
     B[method]=function(self,...)
       if not enabled() then return draw(self,...) end
-      if self.phase=='menu' and not self.safari and not self.contest then
-        local ox=mod.generation==2 and (tonumber((...)) or 0) or 0
-        return placed(run,64+ox*8,96,160+ox*8,self,...)
-      end
       return run(self,...)
     end
     if mod.generation==1 then
@@ -468,5 +510,5 @@ return function(mod)
       end
     end
   end
-  mod.exports = {setting=setting, panel=panel, faded=faded, placement=placement}
+  mod.exports = {setting=setting, panel=panel, faded=faded, placement=placement, textPlaced=textPlaced}
 end

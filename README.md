@@ -2,7 +2,7 @@
 
 Install the BattleUICustomizer folder in your gen1recomp mods folder and enable it. Supports Red, Blue, Yellow, Gold, Silver, Crystal, Ruby, Sapphire, Emerald, FireRed and LeafGreen on 0.3.54 through 0.3.x.
 
-In Options, select BATTLE UI (VANILLA / EMERALD) and BATTLE OPACITY (0–100%, in 10% steps). BATTLE MENU WIDTH selects NORMAL / FULL WIDTH. BATTLE MENU ALIGN selects LEFT / CENTER / RIGHT at normal width. FULL WIDTH stretches the entire command panel, its labels and cursor across the bottom. Defaults: vanilla, 100% opacity, normal width, right alignment. Settings persist per game. Disable the mod to restore native rendering.
+In Options, select BATTLE UI (VANILLA / EMERALD) and BATTLE OPACITY (0–100%, in 10% steps). BATTLE MENU WIDTH selects NORMAL / FULL WIDTH. BATTLE MENU ALIGN selects LEFT / CENTER / RIGHT at normal width for command and move selection. FULL WIDTH expands the panel across the available bottom area while keeping text and cursors at their original size. Command columns spread across the new width. Existing wide/GBA move grids retain their PP/type band. Defaults: vanilla, 100% opacity, normal width, right alignment. Settings persist per game. Disable the mod to restore native rendering.
 
 EMERALD reuses battle frame art from your imported Emerald cache when available, with native text contrast and geometry. Gen 3 single healthboxes also use your imported Emerald art. Import Emerald through the launcher before starting another game to make its art available. Without that cache, an original Emerald-inspired palette and double frame is used. No Emerald command layout or battle rules are transplanted. Text, cursors, HP values and battle behavior stay native. Opacity affects command/message panels; Gen 3 also supports healthbox backplates. Gen 1/2 health HUDs remain native.
 
@@ -37,5 +37,15 @@ Adds BATTLE MENU WIDTH (NORMAL / FULL WIDTH) and BATTLE MENU ALIGN (LEFT / CENTE
 Works with VANILLA and EMERALD styles, including Gen 1 landscape, across all eleven games. Labels and the selection cursor follow the panel. Unused action-prompt panels are removed; move selection and message layout stay as before. Gen 1/2 special Safari/contest menus retain their native layout. Opacity and landscape color protection remain supported.
 
 Validation: 22 all-game KIM1025 sandbox/settings fixtures and 146 real LOVE pixel cases, including left/center/right/full-width placement, transformed/scaled menus, opaque text, uniform panel alpha and palette preservation. Fixture validation does not replace live iOS testing.
+
+Replace the previous BattleUICustomizer folder and restart. Enable only one copy.
+
+## 1.0.6
+
+BATTLE MENU WIDTH and BATTLE MENU ALIGN now apply to the move-selection panel as well as Fight/PKMN/Item/Run. NORMAL retains the panel width and allows LEFT, CENTER or RIGHT (default). FULL WIDTH fills the available bottom-menu area.
+
+Panel backgrounds expand, but text and selection cursors retain their original size. Command columns are spaced across the wider panel; move names shift with their panel without horizontal distortion. Wide/GBA move layouts that already fill their available area retain the useful PP/type band. VANILLA and EMERALD styles, saved settings, opacity and landscape palette protection are retained.
+
+Validated with 22 eleven-game KIM1025 sandbox/settings fixtures and 218 real LOVE pixel cases, including move-panel alignment, normal-width text inside expanded command/move panels, scaled/translated rendering, opacity and palette preservation. These fixtures do not replace live iOS testing.
 
 Replace the previous BattleUICustomizer folder and restart. Enable only one copy.
