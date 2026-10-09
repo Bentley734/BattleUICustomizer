@@ -1,0 +1,18 @@
+{
+  "id": "battleuicustomizer",
+  "name": "Battle UI Customizer",
+  "version": "1.0.5",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "overhaul",
+  "games": ["red", "blue", "yellow", "gold", "silver", "crystal", "ruby", "sapphire", "emerald", "firered", "leafgreen"],
+  "game_version": ">=0.3.54 <0.4.0",
+  "category": "UI",
+  "priority": 620,
+  "permissions": ["engine_internals"],
+  "dependencies": [],
+  "conflicts": [],
+  "affects_link": false,
+  "github": "Bentley734/BattleUICustomizer",
+  "description": "Battle panel transparency and an Emerald-inspired battle frame theme in all eleven games. Compatible with KIM1025."
+}
