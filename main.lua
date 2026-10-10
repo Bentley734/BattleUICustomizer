@@ -284,6 +284,85 @@ return function(mod)
     local method = mod.generation==2 and 'drawBottom' or 'drawTextArea'
     local draw = B[method]
     local mode, battle, wide, offset = nil,nil,false,0
+    local nativeBox=mod.generation==2 and require('src.ui.gen2.Chrome').box or Font.drawBox
+    local nativeText,nativeCode=Font.draw,Font.drawCode
+    local customMoves=false
+    -- One composited surface owns the outer frame and inset; their opacity
+    -- cannot accumulate. Text is fitted uniformly, never stretched sideways.
+    local function drawMoves(self,isWide,ox)
+      local data=mod.generation==2 and self.game and self.game.data or self.data
+      data=data or {}; local defs=data.moves or {}
+      local list=mod.generation==2 and self.playerMoves and self:playerMoves()
+        or self.player and self.player.curMoves or {}
+      local selected=self.moveIndex or 1
+      local total=isWide and 304 or 160+(ox or 0)*8
+      local width=isWide and 304 or 128+(ox or 0)*8
+      if setting('menu_stretch',0)==1 then width=total end
+      local x=(total-width)*setting('menu_align',2)/2
+      local y=isWide and 104 or 96
+      local height=isWide and 40 or 48
+      local details=isWide and 72 or 40
+      local dx=x+width-details-8
+      local priorMode=mode;mode='box'
+      G.push('all')
+      local ok,err=pcall(function()
+        faded(function()
+          G.setColor(0,0,0,1)
+          if setting('style',1)==2 then panel(x,y,width,height,false)
+          else nativeBox(x/8,y/8,width/8,height/8) end
+          -- A thin inset outline leaves space for four readable detail rows.
+          G.setColor(.22,.25,.28,1)
+          G.rectangle('line',dx+.5,y+7.5,details-1,height-15)
+        end)
+        protect(x,y,width,height)
+        G.setShader();G.setColor(0,0,0,1)
+        local function label(text,px,py,available,maxScale)
+          text=tostring(text or '')
+          local measured=Font.width and Font.width(text) or (Font.encode and #Font.encode(text) or #text)*8
+          local s=math.min(maxScale or 1,available/math.max(8,measured))
+          G.push();G.translate(px,py);G.scale(s,s)
+          nativeText(text,0,0);G.pop()
+        end
+        local columns=isWide and 2 or 1
+        local cell=(dx-x-16)/columns
+        local names,longest={},8
+        for i=1,4 do
+          local move=list[i];local def=move and defs[move.id]
+          names[i]=tostring(def and def.name or move and move.id or '-')
+          local measured=Font.width and Font.width(names[i]) or #names[i]*8
+          longest=math.max(longest,measured)
+        end
+        local listScale=math.min(1,(cell-4)/longest)
+        for i=1,4 do
+          local col=isWide and (i-1)%2 or 0
+          local row=isWide and math.floor((i-1)/2) or i-1
+          local tx=x+16+col*cell
+          local ty=y+8+row*(isWide and 16 or 8)
+          label(names[i],tx,ty,cell-4,listScale)
+          if i==selected then nativeCode(0xED,tx-8,ty) end
+          if self.moveSwapIndex==i and i~=selected then nativeCode(0xEC,tx-8,ty) end
+        end
+        local move=list[selected];local def=move and defs[move.id]
+        local typeName='-';local pp='-/-'
+        if move then
+          if def and def.type then typeName=require('src.battle.TypeChart').displayName(def.type,data) end
+          local maximum=move.maxPp
+          if not maximum then
+            if mod.generation==2 then maximum=require('src.battle.gen2.Mon').maxPpOf(move,data)
+            elseif def then maximum=def.pp+(move.ppUps or 0)*math.floor(def.pp/5) end
+          end
+          pp=tostring(move.pp or 0)..'/'..(maximum and tostring(maximum) or '?')
+        end
+        local disabled=self.player and self.player.disabledSlot==selected
+        if mod.generation==2 and move and self.battle and self.battle.moveDisabled then
+          disabled=self.battle:moveDisabled(self.battle.player,move.id)
+        end
+        local labels={'TYPE',typeName,disabled and 'DISABLED' or 'PP',pp}
+        for i,text in ipairs(labels) do label(text,dx+3,y+8+(i-1)*(isWide and 6 or 8),details-6,.75) end
+      end)
+      G.pop();mode=priorMode
+      if not ok then error(err,0) end
+    end
     local function commandMenu() return battle and battle.phase=='menu' and not battle.safari and not battle.contest end
     local function moves() return battle and (battle.phase=='moves' or battle.phase=='moveSelect') end
     local function menuGeometry()
@@ -297,6 +376,7 @@ return function(mod)
       end
     end
     local function moveText(fn,x,y,...)
+      if customMoves and wide and mode~='box' and y>=104 then return end
       local lx,lw,total,split,columns=menuGeometry()
       if not enabled() or not lx or mode=='box' or mode=='background'
         or placementDepth>0 or y<(wide and 112 or moves() and 104 or 112) then return fn(x,y,...) end
@@ -317,6 +397,10 @@ return function(mod)
     local function boxWrapper(target,name)
       local original=target[name]
       target[name]=function(x,y,w,h,...)
+        if wide and battle and battle.phase=='moveSelect' and y>=13 then
+          if not customMoves then customMoves=true;drawMoves(battle,true,0) end
+          return
+        end
         if not mode or (wide and y<13) then return original(x,y,w,h,...) end
         if skip(x,y,w,h) then G.setColor(0,0,0,1); return end
         if mode=='text' then G.setColor(0,0,0,1); return end
@@ -421,9 +505,20 @@ return function(mod)
     end
     B[method]=function(self,...)
       if not enabled() then return draw(self,...) end
+      if self.phase==(mod.generation==2 and 'moves' or 'moveSelect') then
+        if self.bottomUIVisible and not self:bottomUIVisible() then return end
+        return drawMoves(self,false,mod.generation==2 and select(1,...) or 0)
+      end
       return run(self,...)
     end
     if mod.generation==1 then
+      local pictures=B.drawPicsLayer
+      if pictures then
+        B.drawPicsLayer=function(self,slide,sx,sy,side,skipClip,...)
+          if enabled() and self.phase=='moveSelect' then skipClip=true end
+          return pictures(self,slide,sx,sy,side,skipClip,...)
+        end
+      end
       local zonePass=B.drawZonePass
       B.drawZonePass=function(self,source,sx,sy,...)
         local rects=enabled() and protected[source]
@@ -501,10 +596,12 @@ return function(mod)
       local native=Wide.draw
       Wide.draw=function(self,...)
         if not enabled() then return native(self,...) end
-        local priorMode,priorBattle=mode,battle
+        local priorMode,priorBattle,priorCustom=mode,battle,customMoves
+        customMoves=false
         mode,battle,wide='wide',self,true
         local result={pcall(native,self,...)}
         mode,battle,wide=priorMode,priorBattle,false
+        customMoves=priorCustom
         if not result[1] then error(result[2],0) end
         return unpack(result,2)
       end
@@ -512,3 +609,4 @@ return function(mod)
   end
   mod.exports = {setting=setting, panel=panel, faded=faded, placement=placement, textPlaced=textPlaced}
 end
+
