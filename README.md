@@ -2,7 +2,7 @@
 
 Install the BattleUICustomizer folder in your gen1recomp mods folder and enable it. Supports Red, Blue, Yellow, Gold, Silver, Crystal, Ruby, Sapphire, Emerald, FireRed and LeafGreen on 0.3.54 through 0.3.x.
 
-In Options, select BATTLE UI (VANILLA / EMERALD) and BATTLE OPACITY (0â€“100%, in 10% steps). BATTLE MENU WIDTH selects NORMAL / FULL WIDTH. BATTLE MENU ALIGN selects LEFT / CENTER / RIGHT at normal width for command and move selection. FULL WIDTH expands the panel across the available bottom area without stretching text. Command columns spread across the new width. Gen 1/2 move menus put names on the left and selected TYPE and remaining/max PP in an inset on the right. Long names fit proportionally inside normal-width panels. Gen 3 retains its native move grid and PP/type band. Defaults: vanilla, 100% opacity, normal width, right alignment. Settings persist per game. Disable the mod to restore native rendering.
+In Options, open BATTLE UI CUSTOMIZER, then select BATTLE UI (VANILLA / EMERALD) and BATTLE OPACITY (0â€“100%, in 10% steps). BATTLE MENU WIDTH selects NORMAL / FULL WIDTH. BATTLE MENU ALIGN selects LEFT / CENTER / RIGHT at normal width for command and move selection. FULL WIDTH expands the panel across the available bottom area without stretching text. Command columns spread across the new width. Gen 1/2 move menus put names on the left and selected TYPE and remaining/max PP in an inset on the right. Long names fit proportionally inside normal-width panels. Gen 3 retains its native move grid and PP/type band. Defaults: vanilla, 100% opacity, normal width, right alignment. Settings persist per game. Disable the mod to restore native rendering.
 
 EMERALD reuses battle frame art from your imported Emerald cache when available, with native text contrast and geometry. Gen 3 single healthboxes also use your imported Emerald art. Import Emerald through the launcher before starting another game to make its art available. Without that cache, an original Emerald-inspired palette and double frame is used. No Emerald command layout or battle rules are transplanted. Text, cursors, HP values and battle behavior stay native. Opacity affects command/message panels; Gen 3 also supports healthbox backplates. Gen 1/2 health HUDs remain native.
 
@@ -59,3 +59,9 @@ The old TYPE/PP overlay, its paper and border patches are completely removed. Ge
 Validation: 44 eleven-game sandbox/settings cases on engines 0.3.54 and 0.3.58, including KIM1025 1.6.31; 258 real LOVE graphics cases covering both styles, normal/full width, alignment, opacity, selected PP/type, PP Ups, disabled moves, final palette passes and the actual engine sprite-clipping function. Visual review used extracted Blue glyphs locally; no extracted assets are packaged. This is fixture validation, not live iOS testing.
 
 Replace the previous BattleUICustomizer folder and restart. Enable only one copy.
+
+## 1.0.8
+
+Groups BATTLE UI, BATTLE OPACITY, BATTLE MENU WIDTH and BATTLE MENU ALIGN into one BATTLE UI CUSTOMIZER submenu. Gen 1/2 use the native list screen, while Gen 3 uses a child page in its native options menu. Existing setting keys and saved values are retained. B returns to the parent; Gen 1/2 also provide BACK.
+
+Started from GitHub latest 1.0.7 with release/source byte verification. Validation: 22 all-eleven-game sandbox/submenu/settings fixtures with KIM1025 1.7.21, including four controls, setting persistence, menu entry, back navigation, theme and disabling. Rendering code is unchanged.

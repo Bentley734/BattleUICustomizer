@@ -1,15 +1,29 @@
 {
   "id": "battleuicustomizer",
   "name": "Battle UI Customizer",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "api": 2,
   "entry": "main.lua",
   "profile": "overhaul",
-  "games": ["red", "blue", "yellow", "gold", "silver", "crystal", "ruby", "sapphire", "emerald", "firered", "leafgreen"],
+  "games": [
+    "red",
+    "blue",
+    "yellow",
+    "gold",
+    "silver",
+    "crystal",
+    "ruby",
+    "sapphire",
+    "emerald",
+    "firered",
+    "leafgreen"
+  ],
   "game_version": ">=0.3.54 <0.4.0",
   "category": "UI",
   "priority": 620,
-  "permissions": ["engine_internals"],
+  "permissions": [
+    "engine_internals"
+  ],
   "dependencies": [],
   "conflicts": [],
   "affects_link": false,

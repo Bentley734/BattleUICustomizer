@@ -124,12 +124,13 @@ return function(mod)
       step=function(ctx,dir) return persist(ctx,'menu_align',(setting('menu_align',2)+(dir<0 and -1 or 1))%3) end}
     return out
   end
-  marker=function(nextFn,game,out) return rows(nextFn(game,out)) end
+  local settings=assert(load(assert(mod:read('settings.lua')),'@battle-ui/settings.lua'))()(mod,rows)
+  marker=function(nextFn,game,out) return settings.root(nextFn(game,out),game) end
   mod.hooks:wrap('ui.options.rows',marker,620)
   if mod.generation == 3 then
     local Rows = require('src.ui.game3.option_rows')
     local build = Rows.build
-    Rows.build = function(...) local out=build(...); return enabled() and rows(out) or out end
+    Rows.build = function(ctx,...) local out=build(ctx,...); return enabled() and settings.root(out,ctx and ctx.game) or out end
     local C = require('src.ui.game3.battle_chrome')
     local nativeFrames=C.drawMenuFrames
     local Ui=require('src.core.game3.battle.ui')
